@@ -1,0 +1,25 @@
+{
+  "name": "client-sdk-marketplace",
+  "version": "1.0.0",
+  "description": "sample project for a Client SDK Marketplace Use Case",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Dwane Hemmings",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.16.4",
+    "nexmo": "^2.5.4-beta-1",
+    "body-parser": "^1.19.0",
+    "cors": "^2.8.5"
+  },
+  "engines": {
+    "node": "8.x"
+  },
+  "repository": {
+    "url": "https://glitch.com/edit/#!/hello-express"
+  }
+}
