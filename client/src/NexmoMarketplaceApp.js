@@ -9,11 +9,12 @@ export default function NexmoMarketplaceApp() {
   const [userId, setUserId] = useState('');
   const [itemName, setItemName] = useState('');
   const [itemDescription, setItemDescription] = useState('');
+  const [itemImage, setItemImage] = useState('');
   const [itemPrice, setItemPrice] = useState('');
   const [items, setItems] = useState([]);
   const [nexmoApp, setNexmoApp] = useState('');
   const [nexmoConversation, setNexmoConversation] = useState('');
-  const [conversationItem, setConversationItem] = useState({title:'',description:'',price:'',status:'Available'});
+  const [conversationItem, setConversationItem] = useState({title:'',description:'',image_url:'',price:'',status:'Available',seller:''});
   const [chatMessage, setChatMessage] = useState('');
   const [chatMessages, setChatMessages] = useState([]);
 
@@ -49,6 +50,11 @@ export default function NexmoMarketplaceApp() {
 
   const handleItemNameChange = (e) => {
     setItemName(e.target.value);
+    setItemImage(`https://loremflickr.com/320/240/${e.target.value}`)
+  };
+
+  const handleItemImageChange = (e) => {
+    setItemImage(e.target.value);
   };
 
   const handleItemDescriptionChange = (e) => {
@@ -147,22 +153,24 @@ export default function NexmoMarketplaceApp() {
       display_name: itemName.trim(),
       properties:{
         custom_data:{
-          "title": itemName,
-          "description": itemDescription,
-          "price": itemPrice
+          title: itemName,
+          description: itemDescription,
+          price: itemPrice,
+          image_url: itemImage,
         }
       }
     })
     .then((conversation) => {
       // join the created conversation
       conversation.join().then((member) => {
-        conversation.sendCustomEvent({ type: 'custom:item_details', body: { title: itemName, description: itemDescription, price: itemPrice }})
+        conversation.sendCustomEvent({ type: 'custom:item_details', body: { title: itemName, description: itemDescription, price: itemPrice, image_url: itemImage }})
         .then((custom_event) => {
           console.log(custom_event);
         });
       });
       getConversations();
       setItemName('');
+      setItemImage('');
       setItemDescription('');
       setItemPrice('');
     }).catch((error) => {
@@ -183,17 +191,22 @@ export default function NexmoMarketplaceApp() {
     console.log('getConversation conversation: ', conversation);
 
     let allEvents = await conversation.getEvents({page_size: 100});
-    console.log('allEvents: ',allEvents);
-    allEvents.items.forEach(event => {
+    for(const [k,event] of allEvents.items) {
+      console.log(event);
+      console.log('conversation.members.get(event.from): ',conversation.members.get(event.from).user.id);
+      console.log('nexmoApp: ', nexmoApp);
+      let user = await nexmoApp.getUser(conversation.members.get(event.from).user.id);
+      console.log('user: ',user);
+
       switch(event.type){
         case 'text':
-          setChatMessages(chatMessages => [...chatMessages,{sender:conversation.members.get(event.from), message:event, me:conversation.me}]);
+          setChatMessages(chatMessages => [...chatMessages,{avatar: user.image_url, sender:conversation.members.get(event.from), message:event, me:conversation.me}]);
           break;
         case 'custom:item_details':
-          setConversationItem({...conversationItem,...event.body});
+          setConversationItem({...conversationItem,...event.body, seller: user});
           break;
         case 'custom:stripe_payment':
-          setChatMessages(chatMessages => [...chatMessages,{sender:{user:{name:'Stripe'}}, message:{body:{text:`${event.body.paymentDetails.description}: ${event.body.paymentDetails.status}`}}, me:''}]);
+          setChatMessages(chatMessages => [...chatMessages,{avatar: '', sender:{user:{name:'Stripe'}}, message:{body:{text:`${event.body.paymentDetails.description}: ${event.body.paymentDetails.status}`}}, me:''}]);
           if (event.body.paymentDetails.status === 'succeeded'){
             setConversationItem(prevState => {
               return { ...prevState, status: 'Sold' }
@@ -202,11 +215,13 @@ export default function NexmoMarketplaceApp() {
           break;
         default:
       }
-    });
+    };
 
-    conversation.on('text', (sender, event) => {
+    conversation.on('text', async (sender, event) => {
       console.log('text: sender, event: ', sender, event);
-      setChatMessages(chatMessages => [...chatMessages, {sender: sender, message: event, me: conversation.me}]);
+      let user = await nexmoApp.getUser(sender.user.id);
+      console.log('consersation.on user: ', user);
+      setChatMessages(chatMessages => [...chatMessages, {avatar: user.image_url, sender: sender, message: event, me: conversation.me}]);
     });
 
     conversation.on('custom:stripe_payment', (sender, event) => {
@@ -310,6 +325,14 @@ export default function NexmoMarketplaceApp() {
                   onChange={handleItemNameChange}
               />
               <br/>
+              <label htmlFor="itemImage">Image URL:</label>
+              <input
+                  id="itemImage"
+                  name="itemImage"
+                  value={itemImage}
+                  onChange={handleItemImageChange}
+              />
+              <br/>
               <label htmlFor="itemDescription">Description:</label>
               <textarea
                   id="itemDescription"
@@ -340,12 +363,12 @@ export default function NexmoMarketplaceApp() {
 
       {stage === 'conversation' && (
         <div>
-          <button onClick={()=> {removeEventListeners(); setNexmoConversation(null); setChatMessages([]); setConversationItem({title:'',description:'',price:'',status:'Available'});setStage('listings')}}>back to listings</button>
+          <button onClick={()=> {removeEventListeners(); setNexmoConversation(null); setChatMessages([]); setConversationItem({title:'',description:'',image_url:'',price:'',status:'Available',seller:''});setStage('listings')}}>back to listings</button>
           <div id="conversationItemContainer">
             <div id="conversationItemDetailsContainer">
-              <div id="conversationItemImage">image here</div>
+              <div id="conversationItemImage"><img src={conversationItem.image_url} alt="Item for sale"/></div>
               <div id="conversationItemDetails">
-                <div>{conversationItem.title}</div>
+                <div>{conversationItem.title} seller: {conversationItem.seller['display_name']}</div>
                 <div>{conversationItem.description}</div>
               </div>
               <div id="conversationItemPrice">{conversationItem.price}</div>
@@ -360,7 +383,7 @@ export default function NexmoMarketplaceApp() {
               {chatMessages.map((chatMessage, index) =>{
                 return (
                     <div key={index} className={chatMessage.message.from === chatMessage.me.id ? 'myChatMessageContainer' : 'chatMessageContainer'}>
-                      <div className='sender'>{chatMessage.sender.display_name || chatMessage.sender.user.name || ''}</div>
+                      <div className='sender'>{(chatMessage.avatar !== '' && chatMessage.avatar) && <img src={chatMessage.avatar} className="avatar" alt="User profile avatar"/> }<br/>{chatMessage.sender.display_name || chatMessage.sender.user.name || ''}</div>
                       <div className='message'>{chatMessage.message.body.text}</div>
                     </div>
                 )

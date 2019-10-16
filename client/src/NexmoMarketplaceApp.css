@@ -103,3 +103,7 @@ button {
 
 .sender, .message {
 }
+
+.avatar {
+  max-width: 150px;
+}
