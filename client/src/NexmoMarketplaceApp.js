@@ -19,26 +19,42 @@ export default function NexmoMarketplaceApp() {
   const [chatMessages, setChatMessages] = useState([]);
 
 
-  // useEffect(()=>{
-  //   console.log('useEffect');
-  //   if(nexmoConversation){
-  //     nexmoConversation.on('text', (sender, event) => {
-  //       console.log('text: sender, event: ', sender, event);
-  //       setChatMessages(chatMessages => [...chatMessages, {sender: sender, message: event, me: nexmoConversation.me}]);
-  //       // setChatMessages([...chatMessages,{sender:sender, message:event, me:conversation.me}]);
-  //     });
-  //
-  //     return () => {
-  //       nexmoConversation.off('text', (sender, event) => {
-  //         console.log('remove text: sender, event: ', sender, event);
-  //         setChatMessages(chatMessages => [...chatMessages, {sender: sender, message: event, me: nexmoConversation.me}]);
-  //         // setChatMessages([...chatMessages,{sender:sender, message:event, me:conversation.me}]);
-  //       });
-  //     };
-  //
-  //   }
-  //
-  // });
+  useEffect(()=>{
+    console.log('useEffect');
+    const addMessages = async (sender, event) => {
+      console.log('remove text: sender, event: ', sender, event);
+      let user = await nexmoApp.getUser(sender.user.id);
+      console.log('useEffect user: ', user);
+      setChatMessages(chatMessages => [...chatMessages, {avatar: user.image_url, sender: sender, message: event, me: nexmoConversation.me}]);
+    };
+    if(nexmoConversation){
+      nexmoConversation.on('text', addMessages);
+      return () => {
+        nexmoConversation.off('text', addMessages);
+      };
+    }
+  });
+
+  useEffect(()=>{
+    console.log('useEffect');
+    const setStripePayment = async (sender, event) => {
+      console.log('stripe payment: sender, event: ', sender, event);
+      setChatMessages(chatMessages => [...chatMessages,{sender:{user:{name:'Stripe'}}, message:{body:{text:`${event.body.paymentDetails.description}: ${event.body.paymentDetails.status}`}}, me:''}]);
+      if (event.body.paymentDetails.status === 'succeeded'){
+        console.log('custom:stripe_payment: ', conversationItem);
+        setConversationItem(prevState => {
+          return { ...prevState, status: 'Sold' }
+        });
+      }
+    };
+    if(nexmoConversation){
+      nexmoConversation.on('custom:stripe_payment', setStripePayment);
+      return () => {
+        nexmoConversation.off('custom:stripe_payment', setStripePayment);
+      };
+    }
+  });
+
 
   const handleNameChange = (e) => {
     setName(e.target.value);
@@ -217,23 +233,6 @@ export default function NexmoMarketplaceApp() {
       }
     };
 
-    conversation.on('text', async (sender, event) => {
-      console.log('text: sender, event: ', sender, event);
-      let user = await nexmoApp.getUser(sender.user.id);
-      console.log('consersation.on user: ', user);
-      setChatMessages(chatMessages => [...chatMessages, {avatar: user.image_url, sender: sender, message: event, me: conversation.me}]);
-    });
-
-    conversation.on('custom:stripe_payment', (sender, event) => {
-      console.log('stripe payment: sender, event: ', sender, event);
-      setChatMessages(chatMessages => [...chatMessages,{sender:{user:{name:'Stripe'}}, message:{body:{text:`${event.body.paymentDetails.description}: ${event.body.paymentDetails.status}`}}, me:''}]);
-      if (event.body.paymentDetails.status === 'succeeded'){
-        console.log('custom:stripe_payment: ', conversationItem);
-        setConversationItem(prevState => {
-          return { ...prevState, status: 'Sold' }
-        });
-      }
-    });
     setStage('conversation');
 
   };
