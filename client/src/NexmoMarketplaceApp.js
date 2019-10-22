@@ -18,7 +18,6 @@ export default function NexmoMarketplaceApp() {
   const [chatMessage, setChatMessage] = useState('');
   const [chatMessages, setChatMessages] = useState([]);
 
-
   useEffect(()=>{
     console.log('useEffect');
     const addMessages = async (sender, event) => {
@@ -55,7 +54,6 @@ export default function NexmoMarketplaceApp() {
     }
   });
 
-
   const handleNameChange = (e) => {
     setName(e.target.value);
   };
@@ -81,162 +79,154 @@ export default function NexmoMarketplaceApp() {
     setItemPrice(e.target.value);
   };
 
-  const submitUser = (e) => {
-    fetch('https://green-crowberry.glitch.me/createUser', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        name: name.split(' ').join('-'),
-        display_name: name.trim(),
-        image_url: `https://robohash.org/${name.split(' ').join('-')}`,
-        properties: {
-          custom_data: {
-            "role": role
+  const submitUser = async (e) => {
+    try{
+      const results = await fetch('https://green-crowberry.glitch.me/createUser', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: name.split(' ').join('-'),
+          display_name: name.trim(),
+          image_url: `https://robohash.org/${name.split(' ').join('-')}`,
+          properties: {
+            custom_data: {
+              "role": role
+            }
           }
-        }
-      })
-    })
-    .then(results => results.json())
-    .then(data => {
+        })
+      });
+      const data = await results.json();
       setUserId(data.id);
-      login();
-    });
+      await login();
+    } catch(err){
+      console.log('getJWT error: ',err);
+    }
   };
 
   // Get JWT to authenticate user
   const getJWT = async () => {
-    return await fetch('https://green-crowberry.glitch.me/getJWT', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        name: name.split(' ').join('-')
-      })
-    })
-    .then(results => results.json())
-    .then(data => {
-      console.log('getJWT data: ', data);
+    try{
+      const results = await fetch('https://green-crowberry.glitch.me/getJWT', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: name.split(' ').join('-')
+        })
+      });
+      const data = await results.json();
       return data.jwt;
-    })
-    .catch(err => console.log(err));
+    } catch(err){
+      console.log('getJWT error: ',err);
+    }
   };
 
+  // Log in the user
   const login = async () => {
-    const userJWT = await getJWT();
-    console.log('userJWT: ', userJWT);
-    getConversations();
-    setStage('listings');
-    new NexmoClient({ debug: false })
-    .login(userJWT)
-    .then(app => {
+    try{
+      const userJWT = await getJWT();
+      console.log('userJWT: ', userJWT);
+      const app =  await new NexmoClient({ debug: false }).login(userJWT);
       setNexmoApp(app);
-      return app.getConversations({ page_size: 20 })
-    })
-    .then(conversations_page => {
-      // maybe in the future have a list/section of conversations the user is a member of
-    })
-    .catch(err => console.log(err));
+      await getConversations();
+      setStage('listings');
+    } catch(err){
+      console.log('login error: ',err);
+    }
   };
 
   // Get all conversations, even the ones the user isn't a member of, yet.
-  const getConversations = () => {
-    fetch('https://green-crowberry.glitch.me/getConversations', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        page_size: 100
-      })
-    })
-    .then(results => results.json())
-    .then(data => {
-      setItems(data.conversations);
-    });
-  };
-
-  const submitItem = (e) => {
-    console.log('submit item: ', e);
-    createConversation();
-  };
-
-  const createConversation = () => {
-    nexmoApp.newConversation({
-      name: itemName.split(' ').join('-'), // comment out to get a GUID
-      display_name: itemName.trim(),
-      properties:{
-        custom_data:{
-          title: itemName,
-          description: itemDescription,
-          price: itemPrice,
-          image_url: itemImage,
-        }
-      }
-    })
-    .then((conversation) => {
-      // join the created conversation
-      conversation.join().then((member) => {
-        conversation.sendCustomEvent({ type: 'custom:item_details', body: { title: itemName, description: itemDescription, price: itemPrice, image_url: itemImage }})
-        .then((custom_event) => {
-          console.log(custom_event);
+  const getConversations = async() => {
+    try{
+        const results = await fetch('https://green-crowberry.glitch.me/getConversations', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            page_size: 100
+          })
         });
+        const data = await results.json();
+        setItems(data.conversations);
+    } catch(err) {
+      console.log('getConversations error: ',err);
+    }
+  };
+
+  const submitItem = async(e) => {
+    console.log('submit item: ', e);
+    await createConversation();
+  };
+
+  const createConversation = async() => {
+    try{
+      const conversation = await nexmoApp.newConversation({
+        name: itemName.split(' ').join('-'), // comment out to get a GUID
+        display_name: itemName.trim(),
+        properties:{
+          custom_data:{
+            title: itemName,
+            description: itemDescription,
+            price: itemPrice,
+            image_url: itemImage,
+          }
+        }
       });
-      getConversations();
+      await conversation.join();
+      await conversation.sendCustomEvent({ type: 'custom:item_details', body: { title: itemName, description: itemDescription, price: itemPrice, image_url: itemImage }})
+      await getConversations();
       setItemName('');
       setItemImage('');
       setItemDescription('');
       setItemPrice('');
-    }).catch((error) => {
-      console.log(error);
-    });
+    } catch(err){
+      console.log('createConversation error: ',err);
+    }
   };
 
   const getConversation = async (item) => {
-    console.log('getConversation: ',item);
-    const conversation = await nexmoApp.getConversation(item.uuid);
-    setNexmoConversation(conversation);
-    if (!conversation.me){
-      console.log('not a member. join!');
-      const member = await conversation.join();
-      console.log('getConversation member: ', member);
-    }
-
-    console.log('getConversation conversation: ', conversation);
-
-    let allEvents = await conversation.getEvents({page_size: 100});
-    for(const [k,event] of allEvents.items) {
-      console.log(event);
-      console.log('conversation.members.get(event.from): ',conversation.members.get(event.from).user.id);
-      console.log('nexmoApp: ', nexmoApp);
-      let user = await nexmoApp.getUser(conversation.members.get(event.from).user.id);
-      console.log('user: ',user);
-
-      switch(event.type){
-        case 'text':
-          setChatMessages(chatMessages => [...chatMessages,{avatar: user.image_url, sender:conversation.members.get(event.from), message:event, me:conversation.me}]);
-          break;
-        case 'custom:item_details':
-          setConversationItem({...conversationItem,...event.body, seller: user});
-          break;
-        case 'custom:stripe_payment':
-          setChatMessages(chatMessages => [...chatMessages,{avatar: '', sender:{user:{name:'Stripe'}}, message:{body:{text:`${event.body.paymentDetails.description}: ${event.body.paymentDetails.status}`}}, me:''}]);
-          if (event.body.paymentDetails.status === 'succeeded'){
-            setConversationItem(prevState => {
-              return { ...prevState, status: 'Sold' }
-            });
-          }
-          break;
-        default:
+    try {
+      const conversation = await nexmoApp.getConversation(item.uuid);
+      setNexmoConversation(conversation);
+      if (!conversation.me){
+        await conversation.join();
       }
-    };
 
-    setStage('conversation');
+      let allEvents = await conversation.getEvents({page_size: 100});
+      for(const [k,event] of allEvents.items) {
+        console.log(event);
+        console.log('conversation.members.get(event.from): ',conversation.members.get(event.from).user.id);
+        console.log('nexmoApp: ', nexmoApp);
+        let user = await nexmoApp.getUser(conversation.members.get(event.from).user.id);
+        console.log('user: ',user);
 
+        switch(event.type){
+          case 'text':
+            setChatMessages(chatMessages => [...chatMessages,{avatar: user.image_url, sender:conversation.members.get(event.from), message:event, me:conversation.me}]);
+            break;
+          case 'custom:item_details':
+            setConversationItem({...conversationItem,...event.body, seller: user});
+            break;
+          case 'custom:stripe_payment':
+            setChatMessages(chatMessages => [...chatMessages,{avatar: '', sender:{user:{name:'Stripe'}}, message:{body:{text:`${event.body.paymentDetails.description}: ${event.body.paymentDetails.status}`}}, me:''}]);
+            if (event.body.paymentDetails.status === 'succeeded'){
+              setConversationItem(prevState => {
+                return { ...prevState, status: 'Sold' }
+              });
+            }
+            break;
+          default:
+        }
+      }
+      setStage('conversation');
+    } catch(err){
+      console.log('getConversation error: ',err);
+    }
   };
-
 
   const handleChatMessageChange = (e) => {
     setChatMessage(e.target.value);
@@ -245,42 +235,35 @@ export default function NexmoMarketplaceApp() {
   const submitChatMessage = async (e) => {
     e.stopPropagation();
     e.preventDefault();
-    await nexmoConversation.sendText(chatMessage);
-    console.log('submitChatMessage: ');
-    setChatMessage('');
+    try {
+      await nexmoConversation.sendText(chatMessage);
+      setChatMessage('');
+    } catch (err){
+      console.log('submitChatMessage: error', err);
+    }
   };
 
   // Mock a Stripe Payment call. Reference: https://stripe.com/docs/api/charges/create
-  const postStripePayment = () => {
-    fetch('https://green-crowberry.glitch.me/stripePayment', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        amount: parseFloat(conversationItem.price.replace('$','')) * 100,
-        currency: "usd",
-        source: "tok_amex", // obtained with Stripe.js
-        description: `Charge for ${conversationItem.title} from ${name}.`
-      })
-    })
-        .then(results => results.json())
-        .then(data => {
-          nexmoConversation.sendCustomEvent({ type: 'custom:stripe_payment', body: { paymentDetails: data.response }}).then((custom_event) => {
-            console.log(custom_event);
-          });
-          // setItems(data.conversations);
-        });
+  const postStripePayment = async() => {
+    try{
+      const results = await fetch('https://green-crowberry.glitch.me/stripePayment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          amount: parseFloat(conversationItem.price.replace('$','')) * 100,
+          currency: "usd",
+          source: "tok_amex", // obtained with Stripe.js
+          description: `Charge for ${conversationItem.title} from ${name}.`
+        })
+      });
+      const data = await results.json();
+      await nexmoConversation.sendCustomEvent({ type: 'custom:stripe_payment', body: { paymentDetails: data.response }});
+    } catch(err){
+      console.log('createConversation error: ',err);
+    }
   };
-
-  const removeEventListeners = () => {
-    nexmoConversation.off('text', () => {
-      console.log('remove text: sender, event');
-    });
-
-
-  };
-
 
   return (
     <div className="App">
@@ -362,12 +345,12 @@ export default function NexmoMarketplaceApp() {
 
       {stage === 'conversation' && (
         <div>
-          <button onClick={()=> {removeEventListeners(); setNexmoConversation(null); setChatMessages([]); setConversationItem({title:'',description:'',image_url:'',price:'',status:'Available',seller:''});setStage('listings')}}>back to listings</button>
+          <button onClick={()=> {setNexmoConversation(null); setChatMessages([]); setConversationItem({title:'',description:'',image_url:'',price:'',status:'Available',seller:''});setStage('listings')}}>back to listings</button>
           <div id="conversationItemContainer">
             <div id="conversationItemDetailsContainer">
               <div id="conversationItemImage"><img src={conversationItem.image_url} alt="Item for sale"/></div>
               <div id="conversationItemDetails">
-                <div>{conversationItem.title} seller: {conversationItem.seller['display_name']}</div>
+                <div>{conversationItem.title} <br/>seller: {conversationItem.seller['display_name']}</div>
                 <div>{conversationItem.description}</div>
               </div>
               <div id="conversationItemPrice">{conversationItem.price}</div>
