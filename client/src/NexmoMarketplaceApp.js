@@ -6,7 +6,6 @@ export default function NexmoMarketplaceApp() {
   const [stage, setStage] = useState('login'); //login, listings, conversation
   const [name, setName] = useState('');
   const [role, setRole] = useState('');
-  const [userId, setUserId] = useState('');
   const [itemName, setItemName] = useState('');
   const [itemDescription, setItemDescription] = useState('');
   const [itemImage, setItemImage] = useState('');
@@ -19,11 +18,8 @@ export default function NexmoMarketplaceApp() {
   const [chatMessages, setChatMessages] = useState([]);
 
   useEffect(()=>{
-    console.log('useEffect');
     const addMessages = async (sender, event) => {
-      console.log('remove text: sender, event: ', sender, event);
       let user = await nexmoApp.getUser(sender.user.id);
-      console.log('useEffect user: ', user);
       setChatMessages(chatMessages => [...chatMessages, {avatar: user.image_url, sender: sender, message: event, me: nexmoConversation.me}]);
     };
     if(nexmoConversation){
@@ -35,12 +31,9 @@ export default function NexmoMarketplaceApp() {
   });
 
   useEffect(()=>{
-    console.log('useEffect');
     const setStripePayment = async (sender, event) => {
-      console.log('stripe payment: sender, event: ', sender, event);
       setChatMessages(chatMessages => [...chatMessages,{sender:{user:{name:'Stripe'}}, message:{body:{text:`${event.body.paymentDetails.description}: ${event.body.paymentDetails.status}`}}, me:''}]);
       if (event.body.paymentDetails.status === 'succeeded'){
-        console.log('custom:stripe_payment: ', conversationItem);
         setConversationItem(prevState => {
           return { ...prevState, status: 'Sold' }
         });
@@ -81,7 +74,7 @@ export default function NexmoMarketplaceApp() {
 
   const submitUser = async (e) => {
     try{
-      const results = await fetch('https://green-crowberry.glitch.me/createUser', {
+      const results = await fetch('/createUser', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -97,18 +90,17 @@ export default function NexmoMarketplaceApp() {
           }
         })
       });
-      const data = await results.json();
-      setUserId(data.id);
+      await results.json();
       await login();
     } catch(err){
-      console.log('getJWT error: ',err);
+      console.log('submitUser error: ',err);
     }
   };
 
   // Get JWT to authenticate user
   const getJWT = async () => {
     try{
-      const results = await fetch('https://green-crowberry.glitch.me/getJWT', {
+      const results = await fetch('/getJWT', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -128,7 +120,6 @@ export default function NexmoMarketplaceApp() {
   const login = async () => {
     try{
       const userJWT = await getJWT();
-      console.log('userJWT: ', userJWT);
       const app =  await new NexmoClient({ debug: false }).login(userJWT);
       setNexmoApp(app);
       await getConversations();
@@ -141,7 +132,7 @@ export default function NexmoMarketplaceApp() {
   // Get all conversations, even the ones the user isn't a member of, yet.
   const getConversations = async() => {
     try{
-        const results = await fetch('https://green-crowberry.glitch.me/getConversations', {
+        const results = await fetch('/getConversations', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -158,7 +149,6 @@ export default function NexmoMarketplaceApp() {
   };
 
   const submitItem = async(e) => {
-    console.log('submit item: ', e);
     await createConversation();
   };
 
@@ -197,13 +187,8 @@ export default function NexmoMarketplaceApp() {
       }
 
       let allEvents = await conversation.getEvents({page_size: 100});
-      for(const [k,event] of allEvents.items) {
-        console.log(event);
-        console.log('conversation.members.get(event.from): ',conversation.members.get(event.from).user.id);
-        console.log('nexmoApp: ', nexmoApp);
+      for(const [,event] of allEvents.items) {
         let user = await nexmoApp.getUser(conversation.members.get(event.from).user.id);
-        console.log('user: ',user);
-
         switch(event.type){
           case 'text':
             setChatMessages(chatMessages => [...chatMessages,{avatar: user.image_url, sender:conversation.members.get(event.from), message:event, me:conversation.me}]);
@@ -246,7 +231,7 @@ export default function NexmoMarketplaceApp() {
   // Mock a Stripe Payment call. Reference: https://stripe.com/docs/api/charges/create
   const postStripePayment = async() => {
     try{
-      const results = await fetch('https://green-crowberry.glitch.me/stripePayment', {
+      const results = await fetch('/stripePayment', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
