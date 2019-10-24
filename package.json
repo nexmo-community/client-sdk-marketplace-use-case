@@ -8,7 +8,7 @@
     "server": "node server.js",
     "dev": "concurrently --kill-others-on-fail \"yarn server\" \"yarn client\"",
     "start": "concurrently --kill-others-on-fail \"npm run server\" \"npm run client\"",
-    "install": "cd /app/client && pnpm install && cd /app"
+    "install": "cd ./client && npm install && cd ./"
   },
   "keywords": [],
   "author": "Dwane Hemmings",

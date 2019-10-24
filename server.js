@@ -42,7 +42,6 @@ app.post('/getJWT', function(req, res) {
 // the client calls this endpoint to create a new user in the Nexmo application,
 // passing it a username and optional display name
 app.post('/createUser', function(req, res) {
-    console.log('/createUser: ',req);
     nexmo.users.create({
         name: req.body.name,
         display_name: req.body.display_name || req.body.name,
@@ -52,7 +51,6 @@ app.post('/createUser', function(req, res) {
         if (err) {
             res.sendStatus(500);
         } else {
-            console.log('response: ',response);
             res.send({id: response.id});
         }
     });
@@ -60,12 +58,10 @@ app.post('/createUser', function(req, res) {
 
 
 app.post('/getConversations', function(req, res) {
-    console.log('/getConversations: ',req);
     nexmo.conversations.get({page_size: req.body.page_size},(err, response) => {
         if (err) {
             res.sendStatus(500);
         } else {
-            // console.log('response: ',response);
             res.send(response._embedded);
         }
     });
@@ -73,7 +69,6 @@ app.post('/getConversations', function(req, res) {
 
 
 app.post('/createConversation', function(req, res) {
-    console.log('/createConversation: ',req);
     nexmo.conversations.create({
         name: req.body.name,
         display_name: req.body.display_name || req.body.name,
@@ -82,7 +77,6 @@ app.post('/createConversation', function(req, res) {
         if (err) {
             res.sendStatus(500);
         } else {
-            console.log('response: ',response);
             res.send({id: response.id});
         }
     });
@@ -91,7 +85,6 @@ app.post('/createConversation', function(req, res) {
 
 // Create a mock Stripe API Response Reference: https://stripe.com/docs/api/charges/create
 app.post('/stripePayment', function(req, res) {
-    console.log('/stripePayment: ',req);
     res.send({
         response: {
             "id": "ch_1FSNhf2eZvKYlo2CodbBPmwQ",
