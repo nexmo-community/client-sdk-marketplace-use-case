@@ -6515,9 +6515,7 @@ neo-async@^2.5.0, neo-async@^2.6.0, neo-async@^2.6.1:
   integrity sha512-iyam8fBuCUpWeKPGpaNMetEocMt364qkCsfL9JuhjXX6dRnguRVOfk2GZaDpPjcOKiiXCPINZC1GczQ7iTq3Zw==
 
 nexmo-client@^6.0.1:
-  version "6.0.1"
-  resolved "https://registry.yarnpkg.com/nexmo-client/-/nexmo-client-6.0.1.tgz#384b54963ac53a091024838ad08a2f5e1c4cc673"
-  integrity sha512-AUKfccBFBChwoJ9d3Pp4l22YV2webYjhaPT8RsClEQNxwsAhQMgbqMHPdsMsVv5JH3J1RI9NYTkyz2BRIVEvXA==
+  version "6.0.2"
   dependencies:
     "@bugsnag/js" "^6.1.0"
     detect-browser "^4.4.0"
